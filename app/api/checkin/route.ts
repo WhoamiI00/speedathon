@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { db } from "@/lib/supabase/server";
 import { getPersonId, setPersonId } from "@/lib/session";
 import { emit, EV } from "@/lib/keewano";
+import { runMatch } from "@/lib/match";
 
 export const maxDuration = 60;
 
@@ -108,18 +109,13 @@ export async function POST(req: Request) {
     if (error) console.error("[checkin] enqueue intake failed", error.message);
   } else {
     // Matching is slow (Claude); run it after responding. UI updates via Realtime.
+    // Called in-process (not via /api/match/run) so that route never has to trust a person_id from the body.
     const pid = personId;
-    const url = new URL("/api/match/run", req.url);
     after(async () => {
       try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ person_id: pid }),
-        });
-        if (!res.ok) console.error("[checkin] match/run", res.status, (await res.text()).slice(0, 200));
+        await runMatch(pid);
       } catch (e) {
-        console.error("[checkin] match/run failed", e);
+        console.error("[checkin] match failed", e);
       }
     });
   }
