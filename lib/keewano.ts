@@ -141,7 +141,7 @@ async function send(p: Pending): Promise<"ok" | "retry" | "drop"> {
         batch: p.num,
         customEventsHash: hash,
         installId: p.personId,
-        sdkVersion: "server/giverank-1",
+        sdkVersion: "server/sevendipity-1",
         events: p.items,
       }),
       signal: AbortSignal.timeout(10_000),

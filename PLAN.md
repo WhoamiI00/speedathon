@@ -1,6 +1,6 @@
-# Giverank: MVP Build Plan (SpeedHacks SF, Oct 11 2026)
+# Sevendipity: MVP Build Plan (SpeedHacks SF, Oct 11 2026)
 
-> **Giverank is the AI networking agent that makes giving visible.**
+> **Sevendipity is the AI networking agent that makes giving visible.**
 > It matches the right people in the room and calls you to brief you on why you should meet. Every intro that creates real value goes on a reciprocity ledger.
 
 Source concept: `Social_Capital_Network_Product_Concept.docx` (Phase 1 AI Serendipity → Phase 2 Social Capital → Phase 3 Trust Infrastructure).
@@ -30,7 +30,7 @@ Hackathon challenge: *"Remove a meaningful bottleneck in how people work, learn,
 | 13 | Visibility | **Giving is public, taking stays private.** Names appear on the big screen only after opt-in |
 | 14 | Demo | Live loop with a judge (their phone rings on stage). **Backup video recorded at 8:15 PM** |
 | 15 | Team split | 5 tracks, one owner each (section 9) |
-| 16 | Name | **Giverank** |
+| 16 | Name | **Sevendipity** |
 
 ---
 
@@ -268,7 +268,7 @@ const call = await dial.makeCall({ to, fromNumber: process.env.DIAL_NUMBER!, out
 **Tick driver:** the `/dashboard` page calls `/api/calls/tick` every 5 s (Vercel Hobby cron is daily only, so the always-open big screen acts as the cron). Backup: a `while true; curl …; sleep 5` loop on a laptop.
 
 **Call scripts (`outboundInstruction`), each kept under 90 s:**
-- **intake**: "You are Giverank, a friendly networking agent at SpeedHacks SF. Ask the person briefly: (1) who they are and what they work on, (2) what they need most right now (capital, co-founder, hires, customers, mentors…), (3) what they can offer others. Keep it under 90 seconds, then say they'll get their matches on screen and say goodbye." → Claude extracts `{role, who_i_am, needs, gives}` → update person → `match/run`.
+- **intake**: "You are Sevendipity, a friendly networking agent at SpeedHacks SF. Ask the person briefly: (1) who they are and what they work on, (2) what they need most right now (capital, co-founder, hires, customers, mentors…), (3) what they can offer others. Keep it under 90 seconds, then say they'll get their matches on screen and say goodbye." → Claude extracts `{role, who_i_am, needs, gives}` → update person → `match/run`.
 - **briefing** (top match only, after an AI intro is proposed): "Tell {name} they should meet {other} ({role}) at SpeedHacks because {why_for_a}. Ask if they want the intro. Accept a clear yes or no." → Claude extracts `{accept: boolean|null}` → if yes, `respond(accept=true)`. If null, leave it for the web.
 - **followup** (`not_before = met_at + 30 min`): "Ask {name} how valuable meeting {other} was, from 0 (not at all) to 3 (very)." → `{rating}` → `/api/ratings` logic.
 
@@ -347,7 +347,7 @@ Env: `DARWIN_API_KEY` (server-only). Register an app → Search API key (shown o
 Prompt inputs: the target person (full profile) and everyone else in the room as compact lines (`id | role | who (≤120 chars) | needs | gives | follow_through`).
 
 **System prompt (starting point):**
-> You are Giverank's matching agent at SpeedHacks SF. Find the people the TARGET should meet. Evaluate BOTH directions: how well each candidate satisfies the target's needs (`b_fits_a`), and how well the target satisfies the candidate's needs (`a_fits_b`). Interpret needs and offers semantically, not by keyword. Prefer mutual value. Never propose a one-sided match where either direction is below 6. Return up to 3 matches. For each, write `why_for_a` (to the target) and `why_for_b` (to the candidate): one concrete sentence each, naming the specific need and offer, in a warm, direct tone. Also list which of the target's needs have no candidate scoring ≥ 6 (`unmet_needs`).
+> You are Sevendipity's matching agent at SpeedHacks SF. Find the people the TARGET should meet. Evaluate BOTH directions: how well each candidate satisfies the target's needs (`b_fits_a`), and how well the target satisfies the candidate's needs (`a_fits_b`). Interpret needs and offers semantically, not by keyword. Prefer mutual value. Never propose a one-sided match where either direction is below 6. Return up to 3 matches. For each, write `why_for_a` (to the target) and `why_for_b` (to the candidate): one concrete sentence each, naming the specific need and offer, in a warm, direct tone. Also list which of the target's needs have no candidate scoring ≥ 6 (`unmet_needs`).
 
 **Tool schema:** `{ matches: [{ candidate_id, b_fits_a:0-10, a_fits_b:0-10, why_for_a, why_for_b }], unmet_needs: string[] }`. Compute `combined = round(10 × sqrt(b_fits_a × a_fits_b))` in code. Rank by combined × reliability (§6b).
 **After the run:** upsert `matches` (store the pair once with the lower uuid as `a_id`), create `intros` (status `proposed`, `introducer_id = null`) for new pairs, enqueue a `briefing` call for the #1 match if the person opted into calls, and run Darwin for `unmet_needs`.
@@ -393,11 +393,11 @@ Prompt inputs: the target person (full profile) and everyone else in the room as
 ## 11. Demo script (~3 min, live)
 
 1. **Hook (20s):** "At every event you spend three hours talking to the wrong people. The investor you needed was twenty feet away. And the person who introduced you? They got nothing."
-2. **Live check-in (40s):** the judge scans the QR code and taps "Let my agent interview me." **Their phone rings.** Giverank asks 3 questions. Profile and top match appear on the big screen with the two-way *why you should meet*.
+2. **Live check-in (40s):** the judge scans the QR code and taps "Let my agent interview me." **Their phone rings.** Sevendipity asks 3 questions. Profile and top match appear on the big screen with the two-way *why you should meet*.
 3. **The ledger (40s):** show a human intro from this afternoon moving accepted (+0.2) → met via QR (+0.5) → both rated valuable (+1.0). Show Top Connectors. "We show who gives. We never shame who takes. Your balance is private, because a student shouldn't be penalized for needing help."
 4. **Ask the room (30s):** the judge asks anything, and Keewano answers live from tonight's data.
-5. **Darwin (15s):** "No one in this room could help Maya with SAFE docs, so Giverank found an agent."
-6. **Metric + vision (35s):** today's real numbers (median minutes to first valuable meeting vs. the baseline survey, unmet needs covered). "LinkedIn owns professional identity. Giverank owns professional reciprocity. Every encounter, intro and outcome builds a trust graph of who creates value for whom."
+5. **Darwin (15s):** "No one in this room could help Maya with SAFE docs, so Sevendipity found an agent."
+6. **Metric + vision (35s):** today's real numbers (median minutes to first valuable meeting vs. the baseline survey, unmet needs covered). "LinkedIn owns professional identity. Sevendipity owns professional reciprocity. Every encounter, intro and outcome builds a trust graph of who creates value for whom."
 
 **Pre-demo checklist:** dashboard open and ticking, the judge's phone number format tested, Dial credits present, Keewano has ≥ 5 min of fresh events, backup video ready, a seed BrainTech Founder × Investor match visible.
 

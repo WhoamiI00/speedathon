@@ -1,4 +1,4 @@
--- Giverank schema (PLAN.md §3). FROZEN at 11:30. Changes go through T1 and get announced.
+-- Sevendipity schema (PLAN.md §3). FROZEN at 11:30. Changes go through T1 and get announced.
 -- Run once in Supabase SQL editor (or `psql $DATABASE_URL -f supabase/schema.sql`) on a fresh project.
 
 create extension if not exists pgcrypto;

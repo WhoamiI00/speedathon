@@ -22,7 +22,7 @@ function check(label: string, ok: boolean, got: unknown) {
 }
 
 async function main() {
-  const intakeGood = await paced(extractIntake, `Agent: Hi Sam, this is Giverank, your networking agent at SpeedHacks. Is now a good time for a quick interview?
+  const intakeGood = await paced(extractIntake, `Agent: Hi Sam, this is Sevendipity, your networking agent at SpeedHacks. Is now a good time for a quick interview?
 Caller: Sure.
 Agent: Great. Who are you and what do you work on?
 Caller: I'm a second-year PhD student at NYU working on brain-computer interfaces, decoding speech from EEG.
@@ -44,7 +44,7 @@ Caller: I can help creators grow their followers on TikTok.`);
   check("intake: keeps customers need", /customer/i.test(intakeNoisy.needs), intakeNoisy);
   check("intake: drops garbled fragment and commentary", !/storage|unclear|transcri|possibly|mention/i.test(intakeNoisy.needs), intakeNoisy);
 
-  const intakeVoicemail = await paced(extractIntake, `Agent: Hi, this is Giverank...\nCaller: You have reached the voicemail of 415 555 0123. Please leave a message after the tone.`);
+  const intakeVoicemail = await paced(extractIntake, `Agent: Hi, this is Sevendipity...\nCaller: You have reached the voicemail of 415 555 0123. Please leave a message after the tone.`);
   check("intake: voicemail is not complete", intakeVoicemail.complete === false, intakeVoicemail);
   check("intake: voicemail is flagged for retry", intakeVoicemail.voicemail === true, intakeVoicemail);
   const intakeJaVoicemail = await paced(extractIntake, `Caller: 電話に出ることができません。 P という発信音の後に名前とご用件をお話しください。\nAgent: （無言で通話を終了します）`);
