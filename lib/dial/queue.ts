@@ -13,6 +13,7 @@ import {
   formatTranscript,
 } from "./extract";
 import { recordRating, respondToIntro } from "./bridge";
+import { runMatch } from "@/lib/match";
 
 // Owner: T3. The call queue (PLAN §5). `call_jobs` rows are the queue; `tick()` is the worker.
 // Driven by POST /api/calls/tick (the always-open /dashboard pings it every ~5s).
@@ -284,16 +285,12 @@ async function applyIntake(job: CallJob, call: Call, r: Record<string, unknown>,
   emit(job.person_id, EV.intake_call_seconds, Math.max(0, Math.round(call.duration ?? 0)));
 
   // Matching is slow (Claude); run it after the tick responds. UI updates via Realtime.
+  // In-process: /api/match/run is cookie-only and rejects a person_id from the body.
   defer(async () => {
     try {
-      const res = await fetch(new URL("/api/match/run", origin), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ person_id: job.person_id }),
-      });
-      if (!res.ok) console.error("[dial/queue] match/run", res.status, (await res.text()).slice(0, 200));
+      await runMatch(job.person_id);
     } catch (e) {
-      console.error("[dial/queue] match/run failed", e);
+      console.error("[dial/queue] match failed", e);
     }
   });
 }
