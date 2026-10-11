@@ -23,6 +23,24 @@
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --animate-zoom-in: zoom-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  @keyframes zoom-in {
+    from {
+      transform: scale(0.55);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-zoom-in {
+    animation: none;
+  }
 }
 
 body {

@@ -45,7 +45,7 @@ export function CircleSection({
       </div>
 
       {sel < 0 ? (
-        <p className="text-sm text-muted">Tap a group in the circle, or a button above, to see who is in the room.</p>
+        <p className="text-sm text-muted">Tap a slice of the circle, or a button above, to zoom into that group and see who is in the room.</p>
       ) : (
         <div className="flex flex-col gap-2">
           <h3 className="mt-1 font-display text-[17px] font-semibold">
