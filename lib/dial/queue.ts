@@ -188,6 +188,8 @@ async function reconcile(defer: Defer, report: TickReport) {
       await handleTerminated(job, call, defer, report);
     } catch (e) {
       console.error("[dial/queue] reconcile failed", job.id, e instanceof Error ? e.message : e);
+      // A call Dial can no longer look up (e.g. placed on a previous account) would hold a slot forever.
+      if (ageMs(job.updated_at) > STUCK_CALL_MS && (await fail(job, "lookup_failed"))) report.failed++;
     }
   }
 }
