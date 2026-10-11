@@ -2,6 +2,7 @@ import "server-only";
 import { claude, MODEL } from "@/lib/claude";
 import { db } from "@/lib/supabase/server";
 import { emit, EV } from "@/lib/keewano";
+import { enqueueCall } from "@/lib/dial/enqueue";
 import type { Person } from "@/lib/types";
 
 // Owner: T2. Bilateral matching (PLAN §8): one Claude call per run, whole room in the prompt.
@@ -194,11 +195,13 @@ export async function runMatch(personId: string): Promise<MatchRunResult> {
     results.push({ ...m, match_id: match.id as string, intro_id: introId, intro_created: introCreated });
   }
 
-  // Briefing call for the #1 match, only for people who opted into calls (PLAN §5). T3's tick dials it.
+  // Briefing call for the #1 match (PLAN §5). enqueueCall checks call consent + phone and dedupes per intro.
   const top = results[0];
-  if (top?.intro_created && target.phone && target.profile_source === "call") {
-    const { error } = await supa.from("call_jobs").insert({ person_id: personId, intro_id: top.intro_id, kind: "briefing" });
-    if (error) console.error("[match] enqueue briefing failed", error.message);
+  if (top?.intro_created && top.intro_id) {
+    const r = await enqueueCall({ personId, kind: "briefing", introId: top.intro_id });
+    if (!r.queued && r.reason !== "person did not opt in to calls" && r.reason !== "no phone") {
+      console.error("[match] enqueue briefing failed", r.reason);
+    }
   }
 
   const unmet = output.unmet_needs.map((n) => oneLine(n, 256)).filter(Boolean);
