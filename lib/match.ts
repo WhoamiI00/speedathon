@@ -1,17 +1,18 @@
 import "server-only";
-import { claude, MODEL } from "@/lib/claude";
+import { generateJSON } from "@/lib/llm";
 import { db } from "@/lib/supabase/server";
 import { emit, EV } from "@/lib/keewano";
+import { enqueueCall } from "@/lib/dial/enqueue";
 import type { Person } from "@/lib/types";
 
-// Owner: T2. Bilateral matching (PLAN §8): one Claude call per run, whole room in the prompt.
+// Owner: T2. Bilateral matching (PLAN §8): one LLM call per run, whole room in the prompt.
 
 const MIN_FIT = 6; // propose only if BOTH directions score >= 6/10
 const MAX_MATCHES = 3;
 
 type Candidate = Pick<Person, "id" | "role" | "who_i_am" | "needs" | "gives" | "follow_through">;
 
-/** What Claude returns, from the target's point of view (a = target, b = candidate). */
+/** What the model returns, from the target's point of view (a = target, b = candidate). */
 type RawMatch = { candidate_id: string; b_fits_a: number; a_fits_b: number; why_for_a: string; why_for_b: string };
 type MatchOutput = { matches: RawMatch[]; unmet_needs: string[] };
 
@@ -75,7 +76,7 @@ ${candidates.map(candidateLine).join("\n")}`;
 const clamp10 = (n: unknown) => Math.max(0, Math.min(10, Math.round(Number(n) || 0)));
 
 /**
- * Validate Claude's output and rank it. Pure, so it is easy to test.
+ * Validate the model's output and rank it. Pure, so it is easy to test.
  * combined = round(10 * sqrt(b_fits_a * a_fits_b)); rank by combined * (0.7 + 0.6 * follow_through) (PLAN §6b).
  */
 export function rankMatches(raw: RawMatch[], candidates: Map<string, Pick<Candidate, "follow_through">>): RankedMatch[] {
@@ -112,20 +113,14 @@ export function toMatchRow(roomId: string, targetId: string, m: RankedMatch) {
     : { room_id: roomId, a_id: m.candidate_id, b_id: targetId, b_fits_a: m.a_fits_b, a_fits_b: m.b_fits_a, combined: m.combined, why_for_a: m.why_for_b, why_for_b: m.why_for_a };
 }
 
-export async function askClaude(target: Person, candidates: Candidate[]): Promise<MatchOutput> {
-  const res = await claude().beta.messages.create({
-    model: MODEL,
-    max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: { effort: "medium", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
+export async function proposeMatches(target: Person, candidates: Candidate[]): Promise<MatchOutput> {
+  const parsed = await generateJSON<Partial<MatchOutput>>({
     system: SYSTEM,
-    messages: [{ role: "user", content: buildPrompt(target, candidates) }],
+    user: buildPrompt(target, candidates),
+    schema: OUTPUT_SCHEMA,
+    maxTokens: 16000,
+    timeoutMs: 50_000, // route maxDuration is 60s
   });
-  if (res.stop_reason === "refusal") throw new Error(`match refused: ${res.stop_details?.category ?? "unknown"}`);
-  if (res.stop_reason === "max_tokens") throw new Error("match output truncated (max_tokens)");
-  const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-  const parsed = JSON.parse(text) as Partial<MatchOutput>;
   return {
     matches: Array.isArray(parsed.matches) ? parsed.matches : [],
     unmet_needs: Array.isArray(parsed.unmet_needs) ? parsed.unmet_needs.filter((s) => typeof s === "string") : [],
@@ -133,7 +128,7 @@ export async function askClaude(target: Person, candidates: Candidate[]): Promis
 }
 
 /**
- * Run matching for one person: Claude → matches upsert → proposed AI intros → briefing call for the #1 match.
+ * Run matching for one person: LLM → matches upsert → proposed AI intros → briefing call for the #1 match.
  * Call this directly from server code (check-in, call tick). It trusts personId, so never expose it unauthenticated.
  */
 export async function runMatch(personId: string): Promise<MatchRunResult> {
@@ -154,7 +149,7 @@ export async function runMatch(personId: string): Promise<MatchRunResult> {
   const candidates = (others ?? []).filter((c) => c.needs.trim() || c.gives.trim());
   if (candidates.length === 0) return { person_id: personId, matches: [], unmet_needs: [] };
 
-  const output = await askClaude(target, candidates);
+  const output = await proposeMatches(target, candidates);
   const ranked = rankMatches(output.matches, new Map(candidates.map((c) => [c.id, c])));
 
   const results: MatchRunResult["matches"] = [];
@@ -194,11 +189,13 @@ export async function runMatch(personId: string): Promise<MatchRunResult> {
     results.push({ ...m, match_id: match.id as string, intro_id: introId, intro_created: introCreated });
   }
 
-  // Briefing call for the #1 match, only for people who opted into calls (PLAN §5). T3's tick dials it.
+  // Briefing call for the #1 match (PLAN §5). enqueueCall checks call consent + phone and dedupes per intro.
   const top = results[0];
-  if (top?.intro_created && target.phone && target.profile_source === "call") {
-    const { error } = await supa.from("call_jobs").insert({ person_id: personId, intro_id: top.intro_id, kind: "briefing" });
-    if (error) console.error("[match] enqueue briefing failed", error.message);
+  if (top?.intro_created && top.intro_id) {
+    const r = await enqueueCall({ personId, kind: "briefing", introId: top.intro_id });
+    if (!r.queued && r.reason !== "person did not opt in to calls" && r.reason !== "no phone") {
+      console.error("[match] enqueue briefing failed", r.reason);
+    }
   }
 
   const unmet = output.unmet_needs.map((n) => oneLine(n, 256)).filter(Boolean);

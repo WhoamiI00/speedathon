@@ -9,6 +9,7 @@ export async function GET() {
       "NEXT_PUBLIC_SUPABASE_URL",
       "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       "SUPABASE_SERVICE_ROLE_KEY",
+      "GEMINI_API_KEY",
       "ANTHROPIC_API_KEY",
       "DIAL_API_KEY",
       "DIAL_NUMBER",

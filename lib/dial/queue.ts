@@ -284,7 +284,7 @@ async function applyIntake(job: CallJob, call: Call, r: Record<string, unknown>,
   emit(job.person_id, EV.intake_call_seconds, Math.max(0, Math.round(call.duration ?? 0)));
 
   // Matching is slow (Claude); run it after the tick responds. UI updates via Realtime.
-  // Called in-process: /api/match/run is cookie-only, and a server-side tick has no cookie.
+  // In-process: /api/match/run is cookie-only and rejects a person_id from the body.
   defer(async () => {
     try {
       await runMatch(job.person_id);

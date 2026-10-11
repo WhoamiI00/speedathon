@@ -1,4 +1,4 @@
-// T3: checks transcript → structured result extraction against canned transcripts. Needs ANTHROPIC_API_KEY only.
+// T3: checks transcript → structured result extraction against canned transcripts. Needs ANTHROPIC_API_KEY (or GEMINI_API_KEY with LLM_PROVIDER=gemini).
 // Run: npm run dial:extract
 import { config } from "dotenv";
 import { extractBriefing, extractFollowup, extractIntake } from "@/lib/dial/extract";
