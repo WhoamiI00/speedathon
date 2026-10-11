@@ -274,6 +274,14 @@ const call = await dial.makeCall({ to, fromNumber: process.env.DIAL_NUMBER!, out
 
 **Web fallback for everything:** a call is never the only path.
 
+**T3 ↔ T2 / T1 contract (implemented in `lib/dial/`):**
+- **Scheduling (T2 calls T3):** `enqueueCall({ personId, kind, introId, delayMinutes })` from `lib/dial/enqueue.ts`. Briefing for the person's #1 match after `match/run`; follow-up with `delayMinutes: 30` when an intro reaches `met`. It only queues for people who chose the interview at check-in (`profile_source = 'call'`) and have a phone, and dedupes per person+intro+kind.
+- **Results (T3 calls T2):** T2 exports `respondToIntro(personId, introId, accept)` (same logic as `POST /api/intros/[id]/respond`) and `recordRating(personId, introId, value, 'call')` (same logic as `POST /api/ratings`, applies the ledger rules). T3 wires them in `lib/dial/bridge.ts`; until then they only log.
+- **Intake (T1 ↔ T3):** `/api/checkin` inserts the `intake` job; the tick fills the profile from the transcript, sets `profile_source = 'call'`, then calls `POST /api/match/run`. A failed or empty intake leaves `call_jobs.status = 'failed'` with `result.reason`, so the UI can tell the person to use the web form.
+- **Briefings** name the other person only if their `show_name` is true; otherwise "a founder at the event".
+- **Kill switch:** `DIAL_DISABLED=1` stops all calling. `DIAL_MAX_CONCURRENT` overrides the limit of 2.
+- **Test without the app:** `npm run dial:extract` (canned transcripts) and `npm run dial:call -- intake +1… "Name"` (one real call to your own phone).
+
 ---
 
 ## 6. Keewano (Track 4)

@@ -8,10 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dial:extract": "tsx --conditions=react-server scripts/dial-extract-test.ts",
+    "dial:call": "tsx --conditions=react-server scripts/dial-call.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "@getdial/sdk": "0.41.1",
     "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "react": "19.3.0",
