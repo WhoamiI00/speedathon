@@ -25,7 +25,7 @@ export async function searchAgents(need: string, whoIAm: string, max = 2): Promi
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": key },
     body: JSON.stringify({
-      query: need.slice(0, 2000),
+      query: (whoIAm.trim() ? `${need}. The person asking: ${whoIAm.trim().slice(0, 300)}` : need).slice(0, 2000),
       maxResults: 5,
       ...(whoIAm.trim() ? { context: [{ type: "text", text: `Requester: ${whoIAm.trim().slice(0, 500)}` }] } : {}),
     }),
