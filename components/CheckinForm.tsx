@@ -2,9 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-// Roles double as the sectors of the room circle (founders, investors, ...).
-export const ROLES = ["Founder", "Investor", "Engineer", "Researcher", "Student", "Mentor"] as const;
+import { anonymousLabel, ROLE_OPTIONS as ROLES } from "@/lib/roles";
 
 const input =
   "h-12 w-full rounded-xl border border-line-strong bg-card px-3.5 text-base text-ink placeholder:text-subtle/70";
@@ -153,7 +151,7 @@ export function CheckinForm({ slug }: { slug: string }) {
           <span className="flex flex-col gap-1">
             <span className="text-[15px] font-semibold">Show my name on the big screen</span>
             <span className="text-[13px] leading-snug text-subtle">
-              What you give is public. What you receive stays private. Unchecked, you appear as “A {role ? role.toLowerCase() : "participant"}”.
+              What you give is public. What you receive stays private. Unchecked, you appear as “{anonymousLabel(role || null)}”.
             </span>
           </span>
         </label>
