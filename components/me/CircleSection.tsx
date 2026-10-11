@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { RoomGraph, type GraphLink } from "@/components/RoomGraph";
+import { ResponsiveGraph } from "@/components/ResponsiveGraph";
+import type { GraphLink } from "@/components/RoomGraph";
 import { SECTORS } from "@/lib/roles";
 import type { DirectoryEntry } from "@/lib/me";
 
@@ -23,9 +24,7 @@ export function CircleSection({
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-display text-xl font-semibold">My circle</h2>
-      <div className="flex justify-center">
-        <RoomGraph size={350} center={center} links={links} outer={outer} selected={sel} onSelect={setSel} />
-      </div>
+      <ResponsiveGraph max={380} center={center} links={links} outer={outer} selected={sel} onSelect={setSel} />
 
       <div role="group" aria-label="Filter the room by role" className="flex flex-wrap gap-1.5">
         {["All", ...SECTORS].map((label, k) => {
