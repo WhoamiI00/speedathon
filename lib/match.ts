@@ -2,6 +2,7 @@ import "server-only";
 import { generateJSON } from "@/lib/llm";
 import { db } from "@/lib/supabase/server";
 import { emit, EV } from "@/lib/keewano";
+import { darwinConfigured, searchAgents } from "@/lib/darwin";
 import { enqueueCall } from "@/lib/dial/enqueue";
 import type { Person } from "@/lib/types";
 
@@ -200,7 +201,23 @@ export async function runMatch(personId: string): Promise<MatchRunResult> {
 
   const unmet = output.unmet_needs.map((n) => oneLine(n, 256)).filter(Boolean);
   for (const need of unmet) emit(personId, EV.need_unmet, need);
-  // TODO(T4): query Darwin for `unmet` and store agent_matches (PLAN §7).
+
+  // Darwin (PLAN §7): an agent for each need no human covers. Never lets a Darwin outage break matching.
+  if (unmet.length && darwinConfigured()) {
+    for (const need of unmet.slice(0, 3)) {
+      try {
+        const cards = await searchAgents(need, target.who_i_am);
+        if (cards.length) await supa.from("agent_matches").delete().eq("person_id", personId).eq("need", need); // re-runs replace, not duplicate
+        for (const c of cards) {
+          const { error } = await supa.from("agent_matches").insert({ person_id: personId, need, agent_name: c.agent_name, why: c.why, connect: c.connect });
+          if (error) console.error("[match] agent_matches insert failed", error.message);
+          else emit(personId, EV.darwin_agent_matched, c.agent_name);
+        }
+      } catch (e) {
+        console.error("[match] darwin failed", e instanceof Error ? e.message : e);
+      }
+    }
+  }
 
   return { person_id: personId, matches: results, unmet_needs: unmet };
 }

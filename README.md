@@ -31,6 +31,16 @@ npm run dev                  # http://localhost:3000, health: /api/health
 
 Not built yet: intro respond, encounters, ratings and the ledger (PLAN §2, §4).
 
+## What T4 provides (Keewano + Darwin)
+| Thing | Where | Use |
+|---|---|---|
+| Event transport | `lib/keewano.ts` → `emit(personId, EV.x, value)` | buffers and batches to Keewano's JSON ingest after the response; registers the event map once per instance; never throws. Without `KEEWANO_API_KEY` it only logs |
+| Register events | `npm run keewano:register` (`-- --ping` sends a test event) | optional: registration also happens automatically on first send |
+| Ask the room | `POST /api/ask {question}` → `{answer}` | Claude + Keewano MCP tools (`lib/ask.ts`, `lib/keewano-mcp.ts`); needs `KEEWANO_PAT`. Aggregates only, never a person's take/debit |
+| Follow-through | `POST /api/cron/follow-through` | recomputes `people.follow_through` from intro history (`lib/followthrough.ts`). The matcher already weights by it |
+| Baseline survey | `POST /api/survey/baseline {minutes}` | emits event 2019 (works before check-in) |
+| Darwin | `lib/darwin.ts`, called from `runMatch()` | agent cards for unmet needs → `agent_matches`; needs `DARWIN_API_KEY` |
+
 ## What T3 provides (Dial calls)
 Outbound voice calls through Dial, run from a queue in `call_jobs`. Details: PLAN §5.
 
