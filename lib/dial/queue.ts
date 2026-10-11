@@ -20,6 +20,8 @@ import { runMatch } from "@/lib/match";
 
 const MAX_ATTEMPTS = 2; // one retry on no-answer / busy
 const RETRY_DELAY_MS = 60_000;
+const PENDING_WINDOW_MS = 3 * 60_000; // how far ahead a queued job still counts as 'pending' for the nudge chain
+const VOICEMAIL_RETRY_DELAY_MS = 120_000; // they may be reachable in a couple of minutes
 const RATE_LIMIT_DELAY_MS = 15_000;
 const STUCK_CALL_MS = 8 * 60_000; // Dial caps calls at 5 min; anything older is dead
 const UNCLAIMED_DIALING_MS = 2 * 60_000; // claimed but makeCall never recorded an id
@@ -33,6 +35,7 @@ export type TickReport = {
   finished: number;
   failed: number;
   requeued: number;
+  pending: number; // calls in flight or due within the next few minutes: the nudge chain keeps ticking while > 0
 };
 
 let running = false; // in-process guard; the atomic claims below protect across instances
@@ -226,6 +229,11 @@ async function handleTerminated(job: CallJob, call: Call, defer: Defer, report: 
   else if (job.kind === "briefing") result = { ...(await extractBriefing(transcript)) };
   else result = { ...(await extractFollowup(transcript)) };
 
+  if (job.kind === "intake" && result.complete !== true && result.voicemail === true && attemptsOf(job) + 1 < MAX_ATTEMPTS) {
+    await requeue(job, "voicemail", VOICEMAIL_RETRY_DELAY_MS); // one more try; the web form stays the fallback
+    report.requeued++;
+    return;
+  }
   if (job.kind === "intake" && result.complete !== true) {
     await patch(job.id, "dialing", { status: "failed", transcript, result: { reason: "no_usable_answers", ...result } });
     report.failed++;
@@ -309,7 +317,7 @@ async function applyFollowup(job: CallJob, r: Record<string, unknown>) {
 // ───────────── the worker ─────────────
 
 export async function tick(defer: Defer): Promise<TickReport> {
-  const report: TickReport = { reconciled: 0, started: 0, finished: 0, failed: 0, requeued: 0 };
+  const report: TickReport = { reconciled: 0, started: 0, finished: 0, failed: 0, requeued: 0, pending: 0 };
   if (process.env.DIAL_DISABLED === "1") return { ...report, skipped: "DIAL_DISABLED" };
   if (running) return { ...report, skipped: "tick already running" };
   running = true;
@@ -317,6 +325,12 @@ export async function tick(defer: Defer): Promise<TickReport> {
     await reconcile(defer, report);
     const { count } = await db().from("call_jobs").select("id", { count: "exact", head: true }).eq("status", "dialing");
     await startJobs(MAX_CONCURRENT_CALLS - (count ?? 0), report);
+    const soon = new Date(Date.now() + PENDING_WINDOW_MS).toISOString();
+    const { count: pending } = await db()
+      .from("call_jobs")
+      .select("id", { count: "exact", head: true })
+      .or(`status.eq.dialing,and(status.eq.queued,not_before.lte.${soon})`);
+    report.pending = pending ?? 0;
     return report;
   } finally {
     running = false;

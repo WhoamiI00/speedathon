@@ -3,6 +3,7 @@ import { db } from "@/lib/supabase/server";
 import { getPersonId, setPersonId } from "@/lib/session";
 import { emit, EV } from "@/lib/keewano";
 import { runMatch } from "@/lib/match";
+import { nudgeCalls } from "@/lib/dial/nudge";
 
 export const maxDuration = 60;
 
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
     // T3's /api/calls/tick picks this up; the profile is filled from the transcript, then matching runs.
     const { error } = await supa.from("call_jobs").insert({ person_id: personId, kind: "intake" });
     if (error) console.error("[checkin] enqueue intake failed", error.message);
+    else nudgeCalls(new URL(req.url).origin); // dial now instead of waiting for the dashboard tick
   } else {
     // Matching is slow (Claude); run it after responding. UI updates via Realtime.
     // Called in-process (not via /api/match/run) so that route never has to trust a person_id from the body.

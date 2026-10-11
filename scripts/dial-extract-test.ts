@@ -46,6 +46,12 @@ Caller: I can help creators grow their followers on TikTok.`);
 
   const intakeVoicemail = await paced(extractIntake, `Agent: Hi, this is Giverank...\nCaller: You have reached the voicemail of 415 555 0123. Please leave a message after the tone.`);
   check("intake: voicemail is not complete", intakeVoicemail.complete === false, intakeVoicemail);
+  check("intake: voicemail is flagged for retry", intakeVoicemail.voicemail === true, intakeVoicemail);
+  const intakeJaVoicemail = await paced(extractIntake, `Caller: 電話に出ることができません。 P という発信音の後に名前とご用件をお話しください。\nAgent: （無言で通話を終了します）`);
+  check("intake: Japanese voicemail is flagged", intakeJaVoicemail.voicemail === true && intakeJaVoicemail.complete === false, intakeJaVoicemail);
+  const intakeDecline = await paced(extractIntake, `Agent: Hi Sam, who are you and what do you work on?\nCaller: Sorry, I'm not interested. Please don't call again.`);
+  check("intake: a decline is not voicemail", intakeDecline.complete === false && intakeDecline.voicemail === false, intakeDecline);
+  check("intake: real answers are not voicemail", intakeGood.voicemail === false, intakeGood);
 
   const yes = await paced(extractBriefing, `Agent: I found someone you should meet, Priya, a Series A investor in DeepTech. Would you like me to set up the introduction?\nCaller: Yeah, absolutely, please do.`);
   check("briefing: yes", yes.decision === "yes", yes);

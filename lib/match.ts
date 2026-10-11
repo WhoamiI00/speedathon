@@ -25,7 +25,7 @@ export type MatchRunResult = {
   unmet_needs: string[];
 };
 
-const SYSTEM = `You are Giverank's matching agent at SpeedHacks SF. Find the people the TARGET should meet.
+const SYSTEM = `You are Sevendipity's matching agent at SpeedHacks SF. Find the people the TARGET should meet.
 Evaluate BOTH directions: how well each candidate satisfies the target's needs (b_fits_a), and how well the target satisfies the candidate's needs (a_fits_b). Score each 0-10.
 Interpret needs and offers semantically, not by keyword. Prefer mutual value. Never propose a one-sided match where either direction is below ${MIN_FIT}.
 A candidate's follow_through (0-1) is how reliably they follow up on intros; use it only to break ties between similar fits.

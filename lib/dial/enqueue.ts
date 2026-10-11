@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/supabase/server";
 import type { CallKind } from "./scripts";
+import { nudgeCalls } from "./nudge";
 
 // Owner: T3. Other tracks call this to schedule a call; they never talk to Dial directly.
 //
@@ -51,5 +52,6 @@ export async function enqueueCall(opts: {
     .select("id")
     .single();
   if (error) return { queued: false, reason: error.message };
+  if (!opts.delayMinutes) nudgeCalls(); // due now: don't wait for the dashboard tick
   return { queued: true, jobId: data.id as string };
 }

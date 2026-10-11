@@ -8,6 +8,7 @@ import { generateJSON } from "@/lib/llm";
 
 export type IntakeResult = {
   complete: boolean; // false = voicemail, refusal, or nothing usable → fall back to the web form
+  voicemail: boolean; // true = the call reached an answering machine (worth one retry)
   role: string;
   who_i_am: string;
   needs: string;
@@ -53,7 +54,7 @@ export async function extractIntake(transcript: string): Promise<IntakeResult> {
     name: "record_profile",
     description: "Record the networking profile the caller gave during the interview.",
     system:
-      "You read a transcript of a short interview between Giverank's phone agent and an event attendee. Extract only what the CALLER said; never invent details. " +
+      "You read a transcript of a short interview between Sevendipity's phone agent and an event attendee. Extract only what the CALLER said; never invent details. " +
       "Write each field as a concise first-person-neutral phrase (no 'I'), specific enough to match on (name sectors, stages, regions, resources). " +
       "Phone transcripts contain mis-hearings: leave out any fragment that is unclear, off-topic, or likely a transcription error instead of including it. " +
       "Fields must contain only profile facts the caller stated, never notes, caveats, or commentary about the transcript. Leave a field empty if the caller did not say it. " +
@@ -62,12 +63,13 @@ export async function extractIntake(transcript: string): Promise<IntakeResult> {
       type: "object",
       properties: {
         complete: { type: "boolean", description: "true only if the caller gave at least a need or an offer" },
+        voicemail: { type: "boolean", description: "true if the call reached voicemail or an answering machine / automated greeting instead of the person" },
         role: { type: "string", description: "One short label, e.g. Founder, Investor, Student, Engineer, Researcher, Mentor, Corporate, Other. Empty if unknown." },
         who_i_am: { type: "string", description: "Who they are and what they work on, ≤ 300 chars" },
         needs: { type: "string", description: "What they need right now, ≤ 300 chars" },
         gives: { type: "string", description: "What they can offer others, ≤ 300 chars" },
       },
-      required: ["complete", "role", "who_i_am", "needs", "gives"],
+      required: ["complete", "voicemail", "role", "who_i_am", "needs", "gives"],
     },
     transcript,
   });
@@ -75,6 +77,7 @@ export async function extractIntake(transcript: string): Promise<IntakeResult> {
   const gives = clip(raw.gives, 1000);
   return {
     complete: raw.complete === true && (needs.length > 0 || gives.length > 0),
+    voicemail: raw.voicemail === true,
     role: clip(raw.role, 40),
     who_i_am: clip(raw.who_i_am, 1000),
     needs,
@@ -87,7 +90,7 @@ export async function extractBriefing(transcript: string): Promise<BriefingResul
     name: "record_decision",
     description: "Record whether the caller agreed to the introduction.",
     system:
-      "You read a transcript where Giverank's phone agent asked the caller whether to set up an introduction. " +
+      "You read a transcript where Sevendipity's phone agent asked the caller whether to set up an introduction. " +
       "Answer yes only if the caller clearly agreed, no only if they clearly declined; otherwise unclear. A voicemail or no caller reply is unclear.",
     schema: {
       type: "object",
@@ -104,7 +107,7 @@ export async function extractFollowup(transcript: string): Promise<FollowupResul
     name: "record_rating",
     description: "Record how much the other person helped the caller, 0 to 3.",
     system:
-      "You read a transcript where Giverank's phone agent asked the caller how much someone they met helped them, 0 (not at all) to 3 (very much). " +
+      "You read a transcript where Sevendipity's phone agent asked the caller how much someone they met helped them, 0 (not at all) to 3 (very much). " +
       "Return the caller's rating as an integer 0-3. Map words: not at all=0, a little=1, quite a bit=2, very much=3. Return null if the caller gave no clear answer or it was a voicemail.",
     schema: {
       type: "object",
