@@ -13,6 +13,18 @@ export type KeewanoSession = {
   close: () => Promise<void>;
 };
 
+/** Keewano's tools all take a projectId. KEEWANO_PROJECT_ID, else the one embedded in the ingestion key (a JWT with a projectId claim). */
+export function keewanoProjectId(): string | null {
+  if (process.env.KEEWANO_PROJECT_ID) return process.env.KEEWANO_PROJECT_ID;
+  try {
+    const payload = process.env.KEEWANO_API_KEY?.split(".")[1];
+    const id = payload ? (JSON.parse(Buffer.from(payload, "base64url").toString()) as { projectId?: unknown }).projectId : null;
+    return typeof id === "string" ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 export const keewanoMcpConfigured = () => Boolean(process.env.KEEWANO_PAT);
 
 export async function openKeewano(): Promise<KeewanoSession> {

@@ -7,7 +7,8 @@ import { db } from "@/lib/supabase/server";
 // NOTE: computed from the intros table, which holds the same facts as Keewano events 2006/2007/2010.
 // PLAN §6b asks for the numbers from Keewano via MCP; swap `tallies()` for an MCP query once KEEWANO_PAT is available.
 
-type IntroRow = { a_id: string; b_id: string; a_accepted: boolean | null; b_accepted: boolean | null; status: string };
+type IntroRow = { a_id: string; b_id: string; a_accepted: boolean | null; b_accepted: boolean | null; status: string; created_at?: string };
+const GRACE_MS = 30 * 60_000; // an intro nobody has answered yet is not 'ignored' until this long has passed
 type Tally = { proposed: number; accepted: number; met: number };
 
 export function score(t: Tally): number {
@@ -15,11 +16,13 @@ export function score(t: Tally): number {
 }
 
 /** Pure: tally each person's intro history. `met` counts only intros the person accepted. */
-export function tallies(intros: IntroRow[]): Map<string, Tally> {
+export function tallies(intros: IntroRow[], now = Date.now()): Map<string, Tally> {
   const out = new Map<string, Tally>();
   const get = (id: string) => out.get(id) ?? out.set(id, { proposed: 0, accepted: 0, met: 0 }).get(id)!;
   for (const i of intros) {
+    const fresh = i.created_at ? now - Date.parse(i.created_at) < GRACE_MS : false;
     for (const [id, accepted] of [[i.a_id, i.a_accepted], [i.b_id, i.b_accepted]] as const) {
+      if (accepted === null && fresh) continue; // still waiting for an answer
       const t = get(id);
       t.proposed++;
       if (accepted === true) {
@@ -33,7 +36,7 @@ export function tallies(intros: IntroRow[]): Map<string, Tally> {
 
 export async function refreshFollowThrough(): Promise<{ people: number; updated: number }> {
   const supa = db();
-  const { data: intros, error } = await supa.from("intros").select("a_id, b_id, a_accepted, b_accepted, status");
+  const { data: intros, error } = await supa.from("intros").select("a_id, b_id, a_accepted, b_accepted, status, created_at");
   if (error) throw new Error(error.message);
   const { data: people, error: pErr } = await supa.from("people").select("id, follow_through");
   if (pErr) throw new Error(pErr.message);

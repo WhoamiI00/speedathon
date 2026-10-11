@@ -8,7 +8,9 @@ import { after } from "next/server";
 //
 // Wire format (verified against @keewano/core's REST transport):
 //   POST {BASE}/event/ingress/v1/json/custom   header k-token   {customEventsHash, eventTypes:[{eventTypeId,name,dataType}]}   (register once)
-//   POST {BASE}/event/ingress/v1/json/in       header k-token   {dataSessionId, batch, customEventsHash, installId, sdkVersion, events:[{eventTypeId,timestamp,data}]}
+//   POST {BASE}/event/ingress/v1/json/in?k-token=KEY   {dataSessionId, batch, customEventsHash, installId, sdkVersion, events:[{eventTypeId,timestamp,dataType,data}]}
+// Verified live: /in rejects the header (401 "Missing API Key") and wants the key as a query param; /custom wants the header.
+// Every custom event must carry its dataType, otherwise the server answers 202 with accepted:0 and silently drops it.
 // Entity = installId = people.id (UUID). Without KEEWANO_API_KEY events are only logged.
 
 export const EV = {
@@ -80,7 +82,7 @@ export function catalogHash(): number {
   return h >>> 0 || 1;
 }
 
-type Item = { eventTypeId: number; timestamp: number; data: string | number };
+type Item = { eventTypeId: number; timestamp: number; dataType: DataType; data: string | number };
 type Pending = { personId: string; items: Item[]; num: number; attempts: number };
 
 const dataSessionId = randomUUID(); // stable per server instance
@@ -131,9 +133,9 @@ export function ensureRegistered(): Promise<boolean> {
 async function send(p: Pending): Promise<"ok" | "retry" | "drop"> {
   const hash = catalogHash();
   try {
-    const res = await fetch(`${BASE}/event/ingress/v1/json/in`, {
+    const res = await fetch(`${BASE}/event/ingress/v1/json/in?k-token=${encodeURIComponent(apiKey() ?? "")}`, {
       method: "POST",
-      headers: headers(),
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({
         dataSessionId,
         batch: p.num,
@@ -144,7 +146,13 @@ async function send(p: Pending): Promise<"ok" | "retry" | "drop"> {
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (res.ok) return "ok";
+    if (res.ok) {
+      const receipt = (await res.json().catch(() => null)) as { received?: number; accepted?: number } | null;
+      if (receipt && typeof receipt.accepted === "number" && receipt.accepted < (receipt.received ?? p.items.length)) {
+        console.error("[keewano] batch only partly accepted", p.num, JSON.stringify(receipt));
+      }
+      return "ok";
+    }
     console.error("[keewano] ingest rejected", res.status, (await res.text()).slice(0, 200));
     return [400, 401, 403, 413].includes(res.status) ? "drop" : "retry";
   } catch (e) {
@@ -212,7 +220,7 @@ export function emit(personId: string, eventId: EventId, value: string | number)
       console.log("[keewano]", eventId, personId, data);
       return;
     }
-    queue.push({ personId, item: { eventTypeId: eventId, timestamp: Math.floor(Date.now() / 1000), data } });
+    queue.push({ personId, item: { eventTypeId: eventId, timestamp: Math.floor(Date.now() / 1000), dataType: type, data } });
     if (queue.length > MAX_BUFFER) queue = queue.slice(-MAX_BUFFER);
     schedule();
   } catch (e) {
