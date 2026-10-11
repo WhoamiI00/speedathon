@@ -1,4 +1,4 @@
-# Giverank (SpeedHacks SF hackathon, Oct 11 2026)
+# Sevendipity (SpeedHacks SF hackathon, Oct 11 2026)
 
 Read `PLAN.md` before doing anything. It holds the locked product decisions, schema, API contracts, Keewano event IDs, ledger rules, team tracks and timeline.
 

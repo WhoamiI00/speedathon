@@ -30,7 +30,7 @@ export const keewanoMcpConfigured = () => Boolean(process.env.KEEWANO_PAT);
 export async function openKeewano(): Promise<KeewanoSession> {
   const pat = process.env.KEEWANO_PAT;
   if (!pat) throw new Error("Missing KEEWANO_PAT");
-  const client = new Client({ name: "giverank", version: "1.0.0" });
+  const client = new Client({ name: "sevendipity", version: "1.0.0" });
   await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), { requestInit: { headers: { "k-token": pat } } }));
   const listed = await client.listTools();
   return {
