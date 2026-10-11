@@ -1,14 +1,15 @@
 import Link from "next/link";
+import { LogoMark } from "@/components/Logo";
 
-// Placeholder landing. T5 owns the real pages.
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <h1 className="text-4xl font-semibold tracking-tight">Giverank</h1>
-      <p className="max-w-md text-zinc-600 dark:text-zinc-400">
-        The AI networking agent that makes giving visible.
+      <LogoMark size={72} />
+      <h1 className="font-display text-4xl font-bold tracking-tight">Sevendipity</h1>
+      <p className="max-w-md text-muted">
+        More chances for serendipity. Your agent finds the people you should meet, and makes giving visible.
       </p>
-      <Link className="rounded-full bg-black px-5 py-2 text-white dark:bg-white dark:text-black" href="/r/speedhacks">
+      <Link className="rounded-full bg-ink px-5 py-3 font-semibold text-white" href="/r/speedhacks">
         Check in to SpeedHacks
       </Link>
     </main>
