@@ -35,6 +35,15 @@ Caller: I can give ML expertise, and I can introduce people to our lab and to ot
   check("intake: gives mention ML/expertise", /ML|machine|expertise/i.test(intakeGood.gives), intakeGood);
   check("intake: role set", intakeGood.role.length > 0, intakeGood);
 
+  const intakeNoisy = await paced(extractIntake, `Agent: Hi Kate, who are you and what do you work on?
+Caller: I work on AI UGC, we make AI generated content for brands on TikTok.
+Agent: What do you most need right now?
+Caller: Customers, mainly. Also looking for in bed storage.
+Agent: And what can you offer others?
+Caller: I can help creators grow their followers on TikTok.`);
+  check("intake: keeps customers need", /customer/i.test(intakeNoisy.needs), intakeNoisy);
+  check("intake: drops garbled fragment and commentary", !/storage|unclear|transcri|possibly|mention/i.test(intakeNoisy.needs), intakeNoisy);
+
   const intakeVoicemail = await paced(extractIntake, `Agent: Hi, this is Giverank...\nCaller: You have reached the voicemail of 415 555 0123. Please leave a message after the tone.`);
   check("intake: voicemail is not complete", intakeVoicemail.complete === false, intakeVoicemail);
 
