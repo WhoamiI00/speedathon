@@ -171,6 +171,8 @@ export function RoomGraph({ size, center, links, outer, selected = -1, onSelect,
 
       {SECTORS.map((label, i) => {
         const on = selected === i;
+        // Sectors 1 (right) and 4 (left) sit at the circle's edge: anchor them inward so they never clip.
+        const side = i === 1 ? "right" : i === 4 ? "left" : null;
         return (
           <button
             key={label}
@@ -179,8 +181,8 @@ export function RoomGraph({ size, center, links, outer, selected = -1, onSelect,
             onClick={() => onSelect?.(on ? -1 : i)}
             className="absolute rounded-full font-display font-semibold whitespace-nowrap"
             style={{
-              ...polar(i * 60 + 30, 46.5),
-              transform: "translate(-50%,-50%)",
+              ...polar(i * 60 + 30, side ? 49 : 46.5),
+              transform: side === "right" ? "translate(-100%,-50%)" : side === "left" ? "translate(0,-50%)" : "translate(-50%,-50%)",
               padding: `${0.8 * u}px ${2 * u}px`,
               fontSize: Math.max(10, 1.9 * u),
               background: on ? "#15171C" : "rgba(255,255,255,0.9)",
