@@ -2,8 +2,21 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Call } from "@getdial/sdk";
 
-// Owner: T3. Turn call transcripts into structured results with a forced Claude tool call.
+// Owner: T3. Turn call transcripts into structured results.
+// Provider: Claude (forced tool call) by default; Gemini (JSON schema mode) when only GEMINI_API_KEY is set,
+// or when EXTRACT_PROVIDER=gemini|anthropic says so. NOTE: Gemini's free tier may train on submitted data, so
+// use it for testing, not for real attendees' transcripts.
 const MODEL = "claude-sonnet-5-5";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
+
+type Provider = "anthropic" | "gemini";
+function provider(): Provider {
+  const forced = process.env.EXTRACT_PROVIDER;
+  if (forced === "anthropic" || forced === "gemini") return forced;
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.GEMINI_API_KEY) return "gemini";
+  return "anthropic"; // fails with a clear "missing key" error from the SDK
+}
 
 let anthropic: Anthropic | null = null;
 function claude(): Anthropic {
@@ -37,18 +50,75 @@ export function callerSpoke(call: Pick<Call, "transcript" | "transcriptTurns">):
   return /caller:|user:/i.test(call.transcript ?? "") || (call.transcript ?? "").trim().length > 0;
 }
 
-async function extract<T>(opts: { name: string; description: string; schema: Anthropic.Tool["input_schema"]; system: string; transcript: string }): Promise<T> {
+type Spec = { name: string; description: string; schema: Anthropic.Tool["input_schema"]; system: string; transcript: string };
+
+/** Anthropic JSON Schema → Gemini's OpenAPI subset (type arrays like ["integer","null"] become nullable). */
+function toGeminiSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(toGeminiSchema);
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if (k === "type" && Array.isArray(v)) {
+      const types = v.filter((t) => t !== "null");
+      out.type = types[0];
+      if (types.length < v.length) out.nullable = true;
+    } else out[k] = toGeminiSchema(v);
+  }
+  return out;
+}
+
+async function extractWithClaude<T>(o: Spec): Promise<T> {
   const res = await claude().messages.create({
     model: MODEL,
     max_tokens: 600,
-    system: opts.system,
-    tools: [{ name: opts.name, description: opts.description, input_schema: opts.schema }],
-    tool_choice: { type: "tool", name: opts.name },
-    messages: [{ role: "user", content: `Phone call transcript:\n\n${opts.transcript}` }],
+    system: o.system,
+    tools: [{ name: o.name, description: o.description, input_schema: o.schema }],
+    tool_choice: { type: "tool", name: o.name },
+    messages: [{ role: "user", content: `Phone call transcript:\n\n${o.transcript}` }],
   });
   const block = res.content.find((b) => b.type === "tool_use");
   if (!block || block.type !== "tool_use") throw new Error("extraction returned no tool call");
   return block.input as T;
+}
+
+async function extractWithGemini<T>(o: Spec): Promise<T> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("Missing GEMINI_API_KEY");
+  const request = (withThinking: boolean) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: o.system }] },
+        contents: [{ role: "user", parts: [{ text: `Phone call transcript:\n\n${o.transcript}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: toGeminiSchema(o.schema),
+          temperature: 0,
+          maxOutputTokens: 600,
+          // latency: extraction is on the intake critical path. Not every model accepts this, so it is dropped on a 400.
+          ...(withThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  // Free-tier Gemini returns transient 429/503 under load: retry with backoff.
+  let withThinking = true;
+  let res = await request(withThinking);
+  if (res.status === 400) res = await request((withThinking = false));
+  for (let attempt = 1; attempt <= 3 && (res.status === 429 || res.status >= 500); attempt++) {
+    await new Promise((r) => setTimeout(r, 800 * attempt));
+    res = await request(withThinking);
+  }
+  if (!res.ok) throw new Error(`gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  if (!text) throw new Error("gemini returned no content");
+  return JSON.parse(text) as T;
+}
+
+function extract<T>(o: Spec): Promise<T> {
+  return provider() === "gemini" ? extractWithGemini<T>(o) : extractWithClaude<T>(o);
 }
 
 const clip = (s: unknown, n: number) => (typeof s === "string" ? s.trim().slice(0, n) : "");
