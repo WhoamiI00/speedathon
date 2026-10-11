@@ -159,7 +159,7 @@ async function startJobs(slots: number, report: TickReport) {
 
 // ───────────── reconcile in-flight jobs ─────────────
 
-async function reconcile(origin: string, defer: Defer, report: TickReport) {
+async function reconcile(defer: Defer, report: TickReport) {
   const { data } = await db().from("call_jobs").select("*").eq("status", "dialing");
   for (const job of (data ?? []) as CallJob[]) {
     report.reconciled++;
@@ -182,14 +182,14 @@ async function reconcile(origin: string, defer: Defer, report: TickReport) {
         }
         continue;
       }
-      await handleTerminated(job, call, origin, defer, report);
+      await handleTerminated(job, call, defer, report);
     } catch (e) {
       console.error("[dial/queue] reconcile failed", job.id, e instanceof Error ? e.message : e);
     }
   }
 }
 
-async function handleTerminated(job: CallJob, call: Call, origin: string, defer: Defer, report: TickReport) {
+async function handleTerminated(job: CallJob, call: Call, defer: Defer, report: TickReport) {
   const type = call.status.terminationType ?? call.terminationType ?? "unknown";
 
   if (type !== "completed") {
@@ -213,7 +213,7 @@ async function handleTerminated(job: CallJob, call: Call, origin: string, defer:
 
   if (!transcript || !callerSpoke(call)) {
     if (job.kind === "briefing") {
-      await finish(job, call, transcript, { decision: "unclear", reason: "no_response" }, origin, defer, report);
+      await finish(job, call, transcript, { decision: "unclear", reason: "no_response" }, defer, report);
     } else {
       await fail(job, "no_response", { durationSeconds: call.duration });
       report.failed++;
@@ -231,7 +231,7 @@ async function handleTerminated(job: CallJob, call: Call, origin: string, defer:
     report.failed++;
     return;
   }
-  await finish(job, call, transcript, result, origin, defer, report);
+  await finish(job, call, transcript, result, defer, report);
 }
 
 // ───────────── effects of a finished call ─────────────
@@ -241,7 +241,6 @@ async function finish(
   call: Call,
   transcript: string,
   result: Record<string, unknown>,
-  origin: string,
   defer: Defer,
   report: TickReport,
 ) {
@@ -255,7 +254,7 @@ async function finish(
   report.finished++;
 
   try {
-    if (job.kind === "intake") await applyIntake(job, call, result, origin, defer);
+    if (job.kind === "intake") await applyIntake(job, call, result, defer);
     else if (job.kind === "briefing") await applyBriefing(job, result);
     else await applyFollowup(job, result);
   } catch (e) {
@@ -268,7 +267,7 @@ async function finish(
   }
 }
 
-async function applyIntake(job: CallJob, call: Call, r: Record<string, unknown>, origin: string, defer: Defer) {
+async function applyIntake(job: CallJob, call: Call, r: Record<string, unknown>, defer: Defer) {
   const fields: Record<string, string> = {};
   for (const k of ["role", "who_i_am", "needs", "gives"] as const) {
     const v = r[k];
@@ -309,13 +308,13 @@ async function applyFollowup(job: CallJob, r: Record<string, unknown>) {
 
 // ───────────── the worker ─────────────
 
-export async function tick(origin: string, defer: Defer): Promise<TickReport> {
+export async function tick(defer: Defer): Promise<TickReport> {
   const report: TickReport = { reconciled: 0, started: 0, finished: 0, failed: 0, requeued: 0 };
   if (process.env.DIAL_DISABLED === "1") return { ...report, skipped: "DIAL_DISABLED" };
   if (running) return { ...report, skipped: "tick already running" };
   running = true;
   try {
-    await reconcile(origin, defer, report);
+    await reconcile(defer, report);
     const { count } = await db().from("call_jobs").select("id", { count: "exact", head: true }).eq("status", "dialing");
     await startJobs(MAX_CONCURRENT_CALLS - (count ?? 0), report);
     return report;

@@ -1,5 +1,5 @@
 // T3: place ONE real Dial call to a phone you control, wait for it to end, print the transcript and extraction.
-// No Supabase needed. Needs DIAL_API_KEY, DIAL_NUMBER, and GEMINI_API_KEY (or ANTHROPIC_API_KEY with LLM_PROVIDER=anthropic).
+// No Supabase needed. Needs DIAL_API_KEY, DIAL_NUMBER, and ANTHROPIC_API_KEY (or GEMINI_API_KEY with LLM_PROVIDER=gemini).
 // Run:  npm run dial:call -- intake +14155550123 "Sam Rivera"
 //       npm run dial:call -- briefing +14155550123 "Sam Rivera"
 //       npm run dial:call -- followup +14155550123 "Sam Rivera"

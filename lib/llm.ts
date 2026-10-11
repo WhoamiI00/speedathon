@@ -2,7 +2,7 @@ import "server-only";
 import { claude, MODEL } from "@/lib/claude";
 
 // One place for every structured LLM call (matching, call-transcript extraction, later Ask the room).
-// Provider: LLM_PROVIDER=gemini|anthropic, else Gemini when GEMINI_API_KEY is set, else Claude.
+// Provider: Claude by default. LLM_PROVIDER=gemini switches to Gemini (needs GEMINI_API_KEY).
 // NOTE: Gemini's free tier may use submitted data for training. Use a paid key for real attendees.
 
 export type Provider = "anthropic" | "gemini";
@@ -11,7 +11,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 export function llmProvider(): Provider {
   const forced = process.env.LLM_PROVIDER ?? process.env.EXTRACT_PROVIDER;
   if (forced === "anthropic" || forced === "gemini") return forced;
-  return process.env.GEMINI_API_KEY ? "gemini" : "anthropic";
+  return "anthropic";
 }
 
 export type JsonRequest = {
