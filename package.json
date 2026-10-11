@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "dial:extract": "tsx --conditions=react-server scripts/dial-extract-test.ts",
-    "dial:call": "tsx --conditions=react-server scripts/dial-call.ts"
+    "dial:call": "tsx --conditions=react-server scripts/dial-call.ts",
+    "dial:tick": "bash scripts/tick-loop.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
