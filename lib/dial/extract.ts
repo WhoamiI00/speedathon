@@ -55,6 +55,8 @@ export async function extractIntake(transcript: string): Promise<IntakeResult> {
     system:
       "You read a transcript of a short interview between Giverank's phone agent and an event attendee. Extract only what the CALLER said; never invent details. " +
       "Write each field as a concise first-person-neutral phrase (no 'I'), specific enough to match on (name sectors, stages, regions, resources). " +
+      "Phone transcripts contain mis-hearings: leave out any fragment that is unclear, off-topic, or likely a transcription error instead of including it. " +
+      "Fields must contain only profile facts the caller stated, never notes, caveats, or commentary about the transcript. Leave a field empty if the caller did not say it. " +
       "Set complete=false if the caller declined, was a voicemail, or gave neither a need nor an offer.",
     schema: {
       type: "object",
