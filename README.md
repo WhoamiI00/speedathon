@@ -61,7 +61,7 @@ Only call people who agreed to be called (yourself or teammates).
 
 ## Status
 Done: check-in, seed data, matching, Dial queue with intake / briefing / follow-up calls.
-Open: T4 Keewano transport, Ask the room, Darwin; T5 all pages. See PLAN §9 and §10.
+Open: T4 Keewano transport, Ask the room, Darwin; T5 restyle (minimal working pages: /r/speedhacks, /me, /meet/[token], /p/[id], /dashboard; the dashboard also drives the call tick). See PLAN §9 and §10.
 
 ## Rules
 - The browser can't read `people` at all (phones). Use `public_people` / `public_givers`, or a server component with `db()`.
