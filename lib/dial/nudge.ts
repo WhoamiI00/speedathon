@@ -6,8 +6,8 @@ import { after } from "next/server";
 //
 // nudgeCalls() POSTs /api/calls/tick?chain=N; the tick route re-posts itself every 5 s with N-1 while any call is
 // in flight or due (see app/api/calls/tick/route.ts). Each hop is a short request, so no function stays alive for
-// a whole call. Outside a request (scripts, tests) after() is unavailable and this does nothing; the dashboard
-// tick and `npm run dial:tick` are the backups.
+// a whole call. Where after() is unavailable it falls back to a plain request; the dashboard tick and
+// `npm run dial:tick` are the backups.
 
 export const CHAIN_HOPS = 36; // 36 x 5 s = 3 min, longer than any call (5 min cap, scripts are ~90 s)
 export const CHAIN_GAP_MS = 5_000;
@@ -31,6 +31,8 @@ export function nudgeCalls(origin: string = appOrigin()): void {
       );
     });
   } catch {
-    // not inside a request
+    // after() is unavailable (e.g. already inside a deferred step, or a script). Fire the request directly; if
+    // nothing is listening this is a harmless no-op, and the dashboard tick is the backup.
+    void fetch(tickUrl(origin, CHAIN_HOPS), { method: "POST", signal: AbortSignal.timeout(55_000) }).catch(() => {});
   }
 }

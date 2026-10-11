@@ -298,6 +298,8 @@ async function applyIntake(job: CallJob, call: Call, r: Record<string, unknown>,
   defer(async () => {
     try {
       await runMatch(job.person_id);
+      // runMatch may have queued a briefing call: dial it now instead of on the next /dashboard tick.
+      await tick(defer);
     } catch (e) {
       console.error("[dial/queue] match failed", e);
     }
