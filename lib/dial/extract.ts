@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Call } from "@getdial/sdk";
 
 // Owner: T3. Turn call transcripts into structured results.
-// Provider: Claude (forced tool call) by default; Gemini (JSON schema mode) when only GEMINI_API_KEY is set,
+// Provider: Claude (structured outputs) by default; Gemini (JSON schema mode) when only GEMINI_API_KEY is set,
 // or when EXTRACT_PROVIDER=gemini|anthropic says so. NOTE: Gemini's free tier may train on submitted data, so
 // use it for testing, not for real attendees' transcripts.
 const MODEL = "claude-sonnet-5-5";
@@ -67,18 +67,31 @@ function toGeminiSchema(node: unknown): unknown {
   return out;
 }
 
+/** Structured outputs want closed objects; drop numeric bounds some schema validators reject. */
+function toClaudeSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(toClaudeSchema);
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if (k === "minimum" || k === "maximum") continue;
+    out[k] = toClaudeSchema(v);
+  }
+  if (out.type === "object") out.additionalProperties = false;
+  return out;
+}
+
+// claude-sonnet-5-5 rejects forced tool_choice, so use structured outputs (output_config.format) instead.
 async function extractWithClaude<T>(o: Spec): Promise<T> {
   const res = await claude().messages.create({
     model: MODEL,
     max_tokens: 600,
-    system: o.system,
-    tools: [{ name: o.name, description: o.description, input_schema: o.schema }],
-    tool_choice: { type: "tool", name: o.name },
+    system: `${o.system}\n\n${o.description}`,
     messages: [{ role: "user", content: `Phone call transcript:\n\n${o.transcript}` }],
+    output_config: { format: { type: "json_schema", schema: toClaudeSchema(o.schema) as Record<string, unknown> } },
   });
-  const block = res.content.find((b) => b.type === "tool_use");
-  if (!block || block.type !== "tool_use") throw new Error("extraction returned no tool call");
-  return block.input as T;
+  const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+  if (!text) throw new Error("extraction returned no content");
+  return JSON.parse(text) as T;
 }
 
 async function extractWithGemini<T>(o: Spec): Promise<T> {

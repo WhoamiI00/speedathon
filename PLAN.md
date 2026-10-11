@@ -342,7 +342,7 @@ Env: `DARWIN_API_KEY` (server-only). Register an app → Search API key (shown o
 
 ## 8. Matching (Track 2)
 
-`lib/match.ts`: one Claude call (`claude-sonnet-5-5`, `@anthropic-ai/sdk`) per run. **Force a tool call** with this input schema to get structured output.
+`lib/match.ts`: one Claude call (`claude-sonnet-5-5`, `@anthropic-ai/sdk`) per run. Get structured output with `output_config: { format: { type: "json_schema", schema } }` (objects need `additionalProperties: false`). **Do not use `tool_choice: {type:"tool"}`: `claude-sonnet-5-5` rejects it** (see `lib/dial/extract.ts` for a working example). Use this schema.
 
 Prompt inputs: the target person (full profile) and everyone else in the room as compact lines (`id | role | who (≤120 chars) | needs | gives | follow_through`).
 
