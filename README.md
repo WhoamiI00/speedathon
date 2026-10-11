@@ -1,8 +1,8 @@
-# Giverank
+# Sevendipity
 
 **An AI networking agent for in-person events that matches the right people, phones them to explain why, and makes giving visible.**
 
-Built at **SpeedHacks SF (Oct 11, 2026)**. The app UI currently shows the name *Sevendipity*; the repo and plan call it Giverank.
+Built at **SpeedHacks SF (Oct 11, 2026)**. (Internal name in the repo and plan: *Giverank*.)
 
 - Live app: https://speedathon-np.vercel.app (check-in at `/r/speedhacks`, big screen at `/dashboard`, baseline survey at `/survey`)
 - Product plan and locked decisions: [PLAN.md](PLAN.md)
@@ -13,7 +13,7 @@ Built at **SpeedHacks SF (Oct 11, 2026)**. The app UI currently shows the name *
 
 At an event you spend hours talking to the wrong people. The investor you needed was twenty feet away, and the person who introduced you got nothing for it.
 
-Giverank removes that bottleneck. It cuts the time from check-in to a *valuable* first meeting, and it gives credit to the people who connect others.
+Sevendipity removes that bottleneck. It cuts the time from check-in to a *valuable* first meeting, and it gives credit to the people who connect others.
 
 ## What it does
 
@@ -24,7 +24,7 @@ Giverank removes that bottleneck. It cuts the time from check-in to a *valuable*
 5. **Rate it.** Each person rates "how much did they help you?" (0–3), on the web or in a follow-up phone call.
 6. **The ledger updates.** Introducers and givers earn credit. The big screen shows the live room and a **Top Connectors** board, and anyone can ask the room questions in plain English.
 
-If nobody in the room can meet a need, Giverank searches for an **AI agent** that can, so the person is not left with nothing.
+If nobody in the room can meet a need, Sevendipity searches for an **AI agent** that can, so the person is not left with nothing.
 
 ## Screens
 
