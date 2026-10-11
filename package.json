@@ -11,11 +11,13 @@
     "typecheck": "tsc --noEmit",
     "dial:extract": "tsx --conditions=react-server scripts/dial-extract-test.ts",
     "dial:call": "tsx --conditions=react-server scripts/dial-call.ts",
-    "dial:tick": "bash scripts/tick-loop.sh"
+    "dial:tick": "bash scripts/tick-loop.sh",
+    "keewano:register": "tsx --conditions=react-server scripts/keewano-register.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
     "@getdial/sdk": "0.41.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "qrcode": "^1.5.4",
