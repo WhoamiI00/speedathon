@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { AskRoom } from "@/components/dashboard/AskRoom";
 import { CallTicker } from "@/components/dashboard/CallTicker";
+import { FollowThroughTicker } from "@/components/dashboard/FollowThroughTicker";
 import { DashboardGraph } from "@/components/dashboard/DashboardGraph";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { LogoMark } from "@/components/Logo";
@@ -26,7 +27,12 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   return (
     <main className="flex min-h-full flex-1 flex-col gap-6 bg-night px-4 py-7 text-night-text sm:px-10">
       <LiveRefresh tables={["matches", "intros", "ledger_entries", "encounters"]} pollMs={15000} />
-      {sp.tick !== "0" && <CallTicker />}
+      {sp.tick !== "0" && (
+        <>
+          <CallTicker />
+          <FollowThroughTicker />
+        </>
+      )}
 
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
