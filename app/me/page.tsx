@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { Logo } from "@/components/Logo";
+import { CallWaiter } from "@/components/me/CallWaiter";
 import { CircleSection } from "@/components/me/CircleSection";
 import { IntroduceForm } from "@/components/me/IntroduceForm";
 import { MatchCard } from "@/components/me/MatchCard";
@@ -57,6 +58,7 @@ export default async function MePage(props: PageProps<"/me">) {
         </span>
       </div>
 
+      {(intakePending || (calling && !data.intake)) && <CallWaiter />}
       {(intakePending || (calling && !data.intake)) && (
         <p role="status" className="rounded-2xl bg-ink p-4 text-sm leading-snug text-white">
           <span className="font-semibold text-gold">Your phone will ring shortly.</span> Your agent asks three quick questions, then your
